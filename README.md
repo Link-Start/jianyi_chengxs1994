@@ -2,8 +2,6 @@
 
 一个纯浏览器（开箱即用）视频编辑器，使用原生 HTML、CSS 和 JavaScript 构建。基础剪辑、预览和导出均在本机浏览器内完成，无需后端，也不会上传素材。
 
-在线体验：[https://chengxs1994.github.io/jianyi/](https://chengxs1994.github.io/jianyi/)
-
 ## 快速开始
 
 下载项目并解压，保持目录完整，直接双击 `index.html`，使用桌面版 Chrome 或 Edge 打开即可。如果默认浏览器不是 Chrome 或 Edge，可右键选择「打开方式」。
@@ -47,7 +45,7 @@
 
 ### 画中画
 **支持导入图片和视频作为画中画**
-![Jianyi](readme_file/pic_to_pic.png)
+![Jianyi](readme_file/pic_in_pic.png)
 
 ## 使用流程
 
@@ -56,6 +54,8 @@
 3. 从「文本」「音频」「贴纸」「画中画」添加内容，在右侧调整属性。
 4. 拖动覆盖轨道片段调整时间，拖动两端调整时长；在预览中拖动文字和画中画调整位置。
 5. 添加特效或转场，预览后点击右上角「导出」。
+
+在线体验：[https://chengxs1994.github.io/jianyi/](https://chengxs1994.github.io/jianyi/)
 
 ## 开发中功能
 
