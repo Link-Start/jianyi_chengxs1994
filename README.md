@@ -2,6 +2,8 @@
 
 一个纯浏览器（开箱即用）视频编辑器，使用原生 HTML、CSS 和 JavaScript 构建。基础剪辑、预览和导出均在本机浏览器内完成，无需后端，也不会上传素材。
 
+在线体验：[https://chengxs1994.github.io/jianyi/](https://chengxs1994.github.io/jianyi/)
+
 ## 快速开始
 
 下载项目并解压，保持目录完整，直接双击 `index.html`，使用桌面版 Chrome 或 Edge 打开即可。如果默认浏览器不是 Chrome 或 Edge，可右键选择「打开方式」。
@@ -119,4 +121,3 @@ git diff --check
 ## Star
 
 ### 方便的话，帮忙给项目一个宝贵的star哈，谢谢啦！
-
