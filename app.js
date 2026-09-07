@@ -1111,12 +1111,13 @@ function editTextStyle() {
   Object.assign(selectedText, { bold: $('text-bold').checked, outline: $('text-outline').checked, background: $('text-background').checked, align: $('text-align').value, strokeColor: $('text-stroke-color').value, strokeWidth: Number($('text-stroke-width').value), bgColor: $('text-bg-color').value });
   renderTexts(); draw();
 }
-// 套用预设时保留已有文字内容、字体及时间；没有选中文字则创建片段。
+// 套用预设时保留已有文字内容、字体、字号及时间；新片段沿用默认字号。
 function applyTextPreset(style) {
   if (!clips.length || busy || switching) return;
   pause();
   if (inspectorMode !== 'text' || !selectedText) addText();
-  Object.assign(selectedText, defaultTextStyle(), style);
+  const size = selectedText.size;
+  Object.assign(selectedText, defaultTextStyle(), style, { size });
   showInspector('text'); renderTexts(); draw();
   navigateTime(selectedText.start);
 }
