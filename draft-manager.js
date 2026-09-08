@@ -1,18 +1,22 @@
 'use strict';
 // 管理草稿选择、自动保存与切换；所有写操作串行执行。
 (() => {
-  const store = window.JianyiDraftStore, editor = window.JianyiDraftEditor;
+  let store = window.JianyiDraftStore, rememberedFolder = null;
+  const editor = window.JianyiDraftEditor, folder = window.JianyiDraftFolder;
   const damaged = new Map();
   let current = null, saved = '', observed = '', changedAt = 0, working = false, saving = null, storageError = '', loadRequest = 0;
   const dialog = $('draft-dialog');
   dialog.setAttribute('aria-label', '我的草稿');
   dialog.querySelector('.draft-body').innerHTML = '<div class="draft-list-title"><span>我的草稿</span><button id="draft-new" type="button">＋ 新建草稿</button></div><div id="draft-list"></div><p id="draft-message" role="status"></p><p class="hint">草稿和素材仅保存在当前浏览器；清理站点数据会删除草稿。不同网址、浏览器的草稿不互通。</p>';
+  const locations = document.createElement('div'); locations.className = 'draft-locations';
+  locations.innerHTML = '<div class="draft-location-actions"><button id="draft-browser">浏览器草稿</button><button id="draft-folder-pick">选择本地草稿文件夹</button><button id="draft-folder-reconnect" hidden>重新授权文件夹</button><button id="draft-folder-clean" hidden>清理未引用素材</button></div><p id="draft-location"></p>';
+  dialog.querySelector('.draft-body').prepend(locations);
   const saveButton = document.createElement('button'); saveButton.id = 'draft-save'; saveButton.textContent = '保存草稿';
   const badge = document.createElement('span'); badge.id = 'draft-save-state'; badge.setAttribute('role', 'status');
   document.querySelector('.top-actions').prepend(saveButton, badge);
   // 显示当前作品的持久化状态，只有事务成功才显示已保存。
   function state(message) {
-    badge.textContent = message;
+    badge.textContent = message + (store.isFolder ? ' · 文件夹' : '');
     document.querySelector('.project').textContent = current?.name || '未命名作品';
   }
   // 将异常转换为可执行提示，不清空用户当前的编辑内容。
@@ -41,8 +45,46 @@
     dialog.querySelectorAll('button').forEach(button => { button.disabled = true; });
     saveButton.disabled = true;
     try { await action(); }
-    catch (error) { fail(error); }
-    finally { working = false; saveButton.disabled = false; dialog.querySelectorAll('button').forEach(button => { button.disabled = false; }); }
+    catch (error) { if (error.name !== 'AbortError') fail(error); }
+    finally { working = false; saveButton.disabled = false; dialog.querySelectorAll('button').forEach(button => { button.disabled = false; }); locationState(); }
+  }
+  // 展示当前保存位置，目录模式下清理浏览器数据不会删除磁盘文件。
+  function locationState() {
+    $('draft-location').textContent = store.isFolder ? `保存位置：${store.name}` : '保存位置：当前浏览器';
+    $('draft-folder-pick').disabled = !window.showDirectoryPicker;
+    $('draft-folder-pick').title = window.showDirectoryPicker ? '当前作品会另存副本到所选目录' : '当前浏览器不支持目录写入，请使用桌面 Chrome 或 Edge';
+    $('draft-folder-reconnect').hidden = !rememberedFolder;
+    $('draft-folder-reconnect').textContent = `重新授权：${rememberedFolder?.name || '文件夹'}`;
+    $('draft-folder-clean').hidden = !store.isFolder;
+    dialog.querySelector('.draft-body > .hint').textContent = store.isFolder
+      ? '草稿和素材写入所选文件夹；请备份整个 jianyi-drafts 目录。删除草稿后可手动清理未引用素材。不要在不同浏览器同时编辑同一目录。'
+      : '草稿和素材仅保存在当前浏览器；清理站点数据会删除草稿。不同网址、浏览器的草稿不互通。';
+  }
+  // 在点击事件内请求目录权限，保存成功后才切换存储后端，失败时保留原作品。
+  async function chooseFolder(reconnect = false) {
+    const parent = reconnect ? rememberedFolder : await window.showDirectoryPicker({ mode: 'readwrite', id: 'jianyi-drafts' });
+    if (!parent) throw new Error('请先选择文件夹');
+    if (await parent.requestPermission({ mode: 'readwrite' }) !== 'granted') throw new Error('没有获得文件夹读写权限，当前草稿保持原保存位置');
+    if (store.isFolder && await store.parent.isSameEntry(parent)) { await preserve(); storageError = ''; state(current ? '已保存' : '未创建草稿'); await list(); return; }
+    const target = await folder.connect(parent);
+    await preserve();
+    let record = null, signature = '';
+    if (current || sources.length || draftFonts.size) {
+      const snapshot = editor.snapshot(); signature = JSON.stringify(snapshot.project);
+      record = await target.save({ id: crypto.randomUUID(), name: current?.name || '未命名作品', createdAt: Date.now(), project: snapshot.project, schemaVersion: 1, assetIds: snapshot.files.map(f => f.id), assetInfo: snapshot.files.map(({ blob, ...info }) => info), size: snapshot.files.reduce((sum, f) => sum + f.size, 0), duration: total(), cover: editor.cover() }, snapshot.files, 0);
+    }
+    store = target; current = record; saved = signature; observed = signature; storageError = ''; damaged.clear();
+    rememberedFolder = parent;
+    try { await folder.remembered(parent); } catch { status('草稿已写入文件夹，但浏览器未能记住目录；下次请重新选择'); }
+    state(record ? '已保存' : '未创建草稿'); locationState(); await list();
+    $('draft-message').textContent = record ? '当前作品已另存到文件夹，原位置草稿保留。' : '已连接文件夹，选择草稿或新建作品。';
+  }
+  // 切回浏览器列表前先保存当前文件夹草稿，不自动复制文件回浏览器。
+  async function browserDrafts() {
+    if (!store.isFolder) return list();
+    await preserve(); await editor.restore(empty(), new Map());
+    store = window.JianyiDraftStore; current = null; saved = ''; observed = ''; storageError = ''; damaged.clear();
+    state('未创建草稿'); locationState(); await list();
   }
   // 只有当前工程包含素材或已有草稿时才保存，避免打开列表制造空记录。
   async function preserve() { if (current || sources.length || draftFonts.size) await save(); }
@@ -79,7 +121,7 @@
   }
   // 删除前明确提示永久删除范围；当前草稿删除成功后回到空作品。
   async function remove(item) {
-    if (!confirm(`删除草稿“${item.name}”？未被其他草稿引用的素材副本也会删除，无法撤销。`)) return;
+    if (!confirm(`删除草稿“${item.name}”？${store.isFolder ? '素材文件暂时保留，可稍后清理未引用素材。' : '未被其他草稿引用的素材副本也会删除。'}草稿删除无法撤销。`)) return;
     if (saving) await saving;
     await store.change(item.id, item.revision, null);
     if (current?.id === item.id) { await editor.restore(empty(), new Map()); current = null; saved = ''; observed = ''; state('未创建草稿'); }
@@ -133,6 +175,16 @@
   }
   $('draft-open').onclick = () => operation(show);
   $('draft-new').onclick = () => operation(create);
+  $('draft-folder-pick').onclick = () => operation(() => chooseFolder());
+  $('draft-folder-reconnect').onclick = () => operation(() => chooseFolder(true));
+  $('draft-browser').onclick = () => operation(browserDrafts);
+  // 清理范围仅包含应用专用目录中的无引用素材，不删除任何原始文件。
+  $('draft-folder-clean').onclick = () => operation(async () => {
+    await preserve();
+    if (confirm('清理 jianyi-drafts/assets 中未被任何草稿引用的素材副本？不会删除原始素材，清理无法撤销。')) {
+      const count = await store.clean(); $('draft-message').textContent = `已清理 ${count} 个未引用素材文件`;
+    }
+  });
   saveButton.onclick = () => operation(save);
   // 对话框内的键盘操作不传递到编辑器的删除、播放等快捷键。
   dialog.addEventListener('keydown', event => event.stopPropagation());
@@ -153,5 +205,6 @@
     if (working || saving || storageError || ((current || sources.length) && JSON.stringify(editor.snapshot().project) !== saved)) { event.preventDefault(); event.returnValue = ''; }
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden && !working && !saving && !editor.locked() && (current || sources.length)) save().catch(fail); });
-  state('未创建草稿'); list().then(() => dialog.showModal()).catch(fail);
+  state('未创建草稿'); locationState(); list().then(() => dialog.showModal()).catch(fail);
+  folder.remembered().then(handle => { rememberedFolder = handle || null; if (!working) locationState(); }).catch(() => {});
 })();
