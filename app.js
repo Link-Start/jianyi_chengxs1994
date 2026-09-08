@@ -804,6 +804,7 @@ function renderLibraries() {
 }
 // 绑定工作台分类、上下文删除、时间线缩放与常用快捷键。
 function initWorkspace() {
+  initDraftList();
   document.querySelectorAll('[data-library]').forEach(button => button.onclick = () => showLibrary(button.dataset.library));
   document.querySelectorAll('[data-inspector]').forEach(button => button.onclick = () => showInspector(button.dataset.inspector));
   $('delete-selection').onclick = () => {
@@ -831,6 +832,23 @@ function initWorkspace() {
     if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'A'].includes(document.activeElement.tagName) || busy || switching) return;
     if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); $('delete-selection').click(); }
   });
+}
+
+// 创建草稿入口和列表面板；持久化恢复将在草稿存储模块接入后启用。
+function initDraftList() {
+  const toolbar = $('import')?.parentElement;
+  if (!toolbar || $('draft-open')) return;
+  const button = document.createElement('button');
+  button.id = 'draft-open'; button.type = 'button'; button.textContent = '▣ 草稿';
+  toolbar.prepend(button);
+  const dialog = document.createElement('dialog');
+  dialog.id = 'draft-dialog';
+  dialog.innerHTML = '<header><h2>草稿</h2><button id="draft-close" type="button" aria-label="关闭草稿列表">×</button></header><div class="draft-body"><div class="draft-list-title"><span>我的草稿</span><button id="draft-new" type="button" disabled>＋ 新建草稿</button></div><div id="draft-list"><button class="draft-item current" type="button"><span class="draft-cover">▣</span><span><strong>未命名作品</strong><small>当前编辑 · 保存恢复功能开发中</small></span></button></div><p class="hint">草稿列表入口已就绪，素材副本和自动保存功能正在开发中。</p></div>';
+  document.body.append(dialog);
+  button.onclick = () => dialog.showModal();
+  $('draft-close').onclick = () => dialog.close();
+  dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+  dialog.querySelector('.draft-item').onclick = () => dialog.close();
 }
 
 // 只突出当前编辑对象，避免视频、文字、画中画同时显示选中边框。
