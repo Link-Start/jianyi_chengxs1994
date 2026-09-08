@@ -102,18 +102,18 @@
 ## 代码结构
 
 ```text
-index.html          页面结构
-style.css           工作台样式
-app.js              剪辑状态、交互、预览合成与录制
-text-presets.js     文字样式预设
-export-mux.js       MP4 / MOV 封装入口
-draft-store.js      草稿和素材事务存储、版本冲突及引用清理
-draft-folder.js     用户授权文件夹存储、素材复用与手动清理
-draft-editor.js     工程快照、媒体解码与恢复适配
-draft-manager.js    草稿列表、自动保存、管理与失败提示
-vendor/             浏览器可直接使用的导出组件及许可证
-package.json        导出组件构建配置
-package-lock.json   固定构建依赖版本
+index.html            页面结构
+style.css             工作台样式
+js/app.js             剪辑状态、交互、预览合成与录制
+js/text-presets.js     文字样式预设
+js/export-mux.js       MP4 / MOV 封装入口
+js/draft-store.js      草稿和素材事务存储、版本冲突及引用清理
+js/draft-folder.js     用户授权文件夹存储、素材复用与手动清理
+js/draft-editor.js     工程快照、媒体解码与恢复适配
+js/draft-manager.js    草稿列表、自动保存、管理与失败提示
+vendor/               浏览器可直接使用的导出组件及许可证
+package.json          导出组件构建配置
+package-lock.json     固定构建依赖版本
 ```
 
 ## 开发
@@ -128,12 +128,13 @@ npm run build:export
 提交前执行语法检查和差异检查，并在浏览器中验证涉及的功能：
 
 ```sh
-node --check app.js
-node --check text-presets.js
-node --check export-mux.js
-node --check draft-store.js
-node --check draft-editor.js
-node --check draft-manager.js
+node --check js/app.js
+node --check js/text-presets.js
+node --check js/export-mux.js
+node --check js/draft-store.js
+node --check js/draft-folder.js
+node --check js/draft-editor.js
+node --check js/draft-manager.js
 git diff --check
 ```
 

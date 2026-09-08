@@ -2,7 +2,7 @@
   "name": "jianyi",
   "private": true,
   "scripts": {
-    "build:export": "esbuild export-mux.js --bundle --minify --format=iife --platform=browser --outfile=vendor/mp4-mov.js"
+    "build:export": "esbuild js/export-mux.js --bundle --minify --format=iife --platform=browser --outfile=vendor/mp4-mov.js"
   },
   "devDependencies": {
     "mediabunny": "1.55.7",

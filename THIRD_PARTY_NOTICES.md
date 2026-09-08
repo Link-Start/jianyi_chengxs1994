@@ -8,7 +8,7 @@
 - 对应版本源码与包：<https://www.npmjs.com/package/mediabunny/v/1.55.7>
 - 上游仓库：<https://github.com/Vanilagy/mediabunny>
 
-本项目未修改 Mediabunny 源码。使用 `npm ci` 获取锁定版本，再运行 `npm run build:export` 可从 `export-mux.js` 重建浏览器 bundle。分发时保留第三方许可证与源码获取说明。
+本项目未修改 Mediabunny 源码。使用 `npm ci` 获取锁定版本，再运行 `npm run build:export` 可从 `js/export-mux.js` 重建浏览器 bundle。分发时保留第三方许可证与源码获取说明。
 
 ## esbuild 0.28.2
 
