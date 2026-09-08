@@ -3,6 +3,8 @@
 const $ = id => document.getElementById(id);
 const canvas = $('canvas'), ctx = canvas.getContext('2d');
 const clips = [], sources = [], stickers = [], texts = [], audioClips = [];
+// 保留导入字体原文件，草稿可以在下次打开时重建字体。
+const draftFonts = new Map();
 let selectedAudio = null, musicVoices = [];
 let textDrag = null;
 let selectedText = null, trackDrag = null, inspectorMode = 'video';
@@ -115,7 +117,7 @@ async function importVideos(files) {
       thumb.width = Math.max(1, Math.round(media.videoWidth * thumbScale));
       thumb.height = Math.max(1, Math.round(media.videoHeight * thumbScale));
       thumb.getContext('2d').drawImage(media, 0, 0, thumb.width, thumb.height);
-      const source = { id: nextId++, name: file.name, url, media, thumb: thumb.toDataURL('image/jpeg', .6) };
+      const source = { id: nextId++, name: file.name, file, url, media, thumb: thumb.toDataURL('image/jpeg', .6) };
       sources.push(source);
       clips.push({ id: nextId++, source, in: 0, out: media.duration, lower: 0, upper: media.duration });
       media.onplaying = () => { if (video === media && playing) scheduleMusic(); };
@@ -463,10 +465,10 @@ async function importStickers(files, decal = false) {
       const url = URL.createObjectURL(file), image = new Image();
       try {
         if (file.type.startsWith('video/') || /\.(mp4|mov|webm|m4v)$/i.test(file.name)) {
-          const sticker = await loadPipVideo(file, url); stickers.push(sticker); selectedSticker = sticker; imported++; continue;
+          const sticker = await loadPipVideo(file, url); sticker.file = file; stickers.push(sticker); selectedSticker = sticker; imported++; continue;
         }
         if (file.type === 'image/gif' || /\.gif$/i.test(file.name)) {
-          const sticker = await loadGifSticker(file, url); stickers.push(sticker); selectedSticker = sticker; imported++; continue;
+          const sticker = await loadGifSticker(file, url); sticker.file = file; stickers.push(sticker); selectedSticker = sticker; imported++; continue;
         }
         if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('请选择 PNG、JPG 或 WebP 图片');
         image.src = url; await image.decode();
@@ -478,7 +480,7 @@ async function importStickers(files, decal = false) {
         still.height = Math.max(1, Math.round(image.naturalHeight * scale));
         still.getContext('2d').drawImage(image, 0, 0, still.width, still.height);
         const snapshot = new Image(); snapshot.src = still.toDataURL('image/png'); await snapshot.decode();
-        const sticker = { id: nextId++, name: file.name, url, image: snapshot, decal, x: .72, y: .28, size: .3, opacity: 1, start: 0, end: total() };
+        const sticker = { id: nextId++, name: file.name, file, url, image: snapshot, decal, x: .72, y: .28, size: .3, opacity: 1, start: 0, end: total() };
         stickers.push(sticker); selectedSticker = sticker; imported++;
       } catch (error) { URL.revokeObjectURL(url); failed.push(`${file.name}（${error.message}）`); }
     }
@@ -834,7 +836,7 @@ function initWorkspace() {
   });
 }
 
-// 创建草稿入口和列表面板；持久化恢复将在草稿存储模块接入后启用。
+// 创建草稿入口和容器，内容和交互由独立草稿管理模块接管。
 function initDraftList() {
   const toolbar = $('import')?.parentElement;
   if (!toolbar || $('draft-open')) return;
@@ -843,12 +845,10 @@ function initDraftList() {
   toolbar.prepend(button);
   const dialog = document.createElement('dialog');
   dialog.id = 'draft-dialog';
-  dialog.innerHTML = '<header><h2>草稿</h2><button id="draft-close" type="button" aria-label="关闭草稿列表">×</button></header><div class="draft-body"><div class="draft-list-title"><span>我的草稿</span><button id="draft-new" type="button" disabled>＋ 新建草稿</button></div><div id="draft-list"><button class="draft-item current" type="button"><span class="draft-cover">▣</span><span><strong>未命名作品</strong><small>当前编辑 · 保存恢复功能开发中</small></span></button></div><p class="hint">草稿列表入口已就绪，素材副本和自动保存功能正在开发中。</p></div>';
+  dialog.innerHTML = '<header><h2>草稿</h2><button id="draft-close" type="button" aria-label="关闭草稿列表">×</button></header><div class="draft-body"><p class="hint">正在加载草稿列表…</p></div>';
   document.body.append(dialog);
   button.onclick = () => dialog.showModal();
   $('draft-close').onclick = () => dialog.close();
-  dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
-  dialog.querySelector('.draft-item').onclick = () => dialog.close();
 }
 
 // 只突出当前编辑对象，避免视频、文字、画中画同时显示选中边框。
@@ -930,7 +930,7 @@ async function importAudio(files) {
       try {
         const buffer = await audioCtx.decodeAudioData(await file.arrayBuffer());
         if (!buffer.duration) throw new Error('音频时长无效');
-        const item = { id: nextId++, name: file.name, buffer, in: 0, start: 0, end: Math.min(total(), buffer.duration), volume: 1 };
+        const item = { id: nextId++, name: file.name, file, buffer, in: 0, start: 0, end: Math.min(total(), buffer.duration), volume: 1 };
         audioClips.push(item); selectedAudio = item; count++;
       } catch { failures.push(file.name); }
     }
@@ -1024,6 +1024,7 @@ async function importFonts(files) {
         if (!/\.(ttf|otf|woff2?)$/i.test(file.name)) throw new Error('不支持的字体格式');
         const face = new FontFace(`LightcutFont${nextId++}`, await file.arrayBuffer());
         await face.load(); registerFont(face, `${file.name.replace(/\.[^.]+$/, '')} · 已导入`); lastFont = face.family;
+        draftFonts.set(face.family, { file, face });
       } catch { failures.push(file.name); }
     }
     if (lastFont) {
