@@ -139,6 +139,9 @@ git diff --check
 
 欢迎通过 GitHub Issues 反馈问题，或提交 Pull Request。请说明复现步骤、浏览器版本及预期行为；不要提交私人素材、密钥或依赖安装目录。新增方法请附中文注释。
 
+## 联系我
+<img src="readme_file/wx1.jpg" alt="微信二维码" width="200">
+
 ## 许可证
 
  [许可证](LICENSE)
