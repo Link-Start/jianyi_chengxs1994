@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, readFile, readdir, rm, access } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { compile, create, readDrafts } from './project.mjs';
 
 // 使用假媒体测试纯配置逻辑；真实解码另由浏览器验证，不依赖测试包。
@@ -14,6 +16,14 @@ test('编译、素材复用、只创建新目录、复制失败回滚和参数�
     const config = { version: 1, name: '测试', videos: [{ file: '视频.mp4', in: 0, out: 3 }, { file: '视频.mp4', in: 1, out: 3, transition: { kind: 'dissolve', duration: .4 } }], texts: [{ text: '标题', end: 5 }], audio: [{ file: '音频.wav', end: 5, volume: 30 }] };
     const configFile = path.join(dir, 'edit.json');
     await writeFile(configFile, JSON.stringify(config));
+    // 默认提示与机器输出分别验证，错误状态不能被包装成成功 JSON。
+    const cli = fileURLToPath(new URL('./jianyi.mjs', import.meta.url));
+    const human = spawnSync(process.execPath, [cli, 'validate', configFile], { encoding: 'utf8' });
+    assert.equal(human.status, 0); assert.match(human.stdout, /配置检查通过/);
+    const json = spawnSync(process.execPath, [cli, 'validate', configFile, '--json'], { encoding: 'utf8' });
+    assert.equal(json.status, 0); assert.equal(JSON.parse(json.stdout).valid, true);
+    const invalid = spawnSync(process.execPath, [cli, 'create', configFile, '--json'], { encoding: 'utf8' });
+    assert.notEqual(invalid.status, 0); assert.match(JSON.parse(invalid.stderr).error, /output/);
     const compiled = await compile(configFile);
     assert.equal(compiled.duration, 5); assert.equal(compiled.assets.length, 2);
     assert.equal(compiled.project.sources.length, 1); assert.equal(compiled.project.texts[0].size, 100);

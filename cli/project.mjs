@@ -130,7 +130,7 @@ export async function create(compiled, output) {
     }
     const now = Date.now(), draft = { id: randomUUID(), name: compiled.name, createdAt: now, updatedAt: now, revision: 1, schemaVersion: 1, project: compiled.project, assetIds: compiled.assets.map(a => a.id), assetInfo: compiled.assets.map(({ original, ...info }) => info), size: compiled.assets.reduce((sum, a) => sum + a.size, 0), duration: compiled.duration, cover: '' };
     await writeFile(path.join(root, 'project-index.json'), JSON.stringify({ format: 'jianyi-folder-drafts', version: 1, id: randomUUID(), drafts: [draft] }, null, 2), { flag: 'wx' });
-    return { id: draft.id, name: draft.name, folder: parent, duration: draft.duration, assets: draft.assetIds.length, warnings: compiled.warnings, next: '在网页草稿列表选择 folder 指向的目录，然后打开此草稿。' };
+    return { id: draft.id, name: draft.name, folder: parent, duration: draft.duration, assets: draft.assetIds.length, warnings: compiled.warnings, next: '在网页草稿列表点击“打开本地草稿”，选择 folder 指向的目录或内部 jianyi-drafts，然后打开此草稿。' };
   } catch (error) { await rm(root, { recursive: true, force: true }); throw error; }
 }
 

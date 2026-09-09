@@ -4,20 +4,35 @@ window.JianyiDraftFolder = (() => {
   const marker = 'jianyi-folder-drafts', uuid = /^[a-f0-9-]{36}$/i;
   // 校验文件标识，素材原名只作显示，不参与磁盘路径拼接。
   function key(id) { if (!uuid.test(id)) throw new Error('草稿或素材标识无效'); return id; }
-  // 记录目录句柄，刷新后由用户点击重新授权，绝不自动请求权限。
-  async function remembered(handle) {
+  // 读写目录入口元数据，不在浏览器数据库中存放素材。
+  async function setting(key, value) {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open('jianyi-draft-folders', 1);
       request.onupgradeneeded = () => request.result.createObjectStore('settings');
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
-        const db = request.result, tx = db.transaction('settings', handle ? 'readwrite' : 'readonly');
-        const action = handle ? tx.objectStore('settings').put(handle, 'last') : tx.objectStore('settings').get('last');
+        const db = request.result, tx = db.transaction('settings', value === undefined ? 'readonly' : 'readwrite');
+        const action = value === undefined ? tx.objectStore('settings').get(key) : tx.objectStore('settings').put(value, key);
         let result; action.onsuccess = () => { result = action.result; };
         tx.oncomplete = () => { db.close(); resolve(result); };
         tx.onabort = () => { db.close(); reject(tx.error); };
       };
     });
+  }
+  // 保留旧版最后目录接口，已有记录可迁移为最近目录。
+  async function remembered(handle) { return setting('last', handle); }
+  // 保存最近五个规范化目录，刷新后仅显示入口，授权仍由用户点击触发。
+  async function recent(handle, name) {
+    let entries = await setting('recent');
+    if (!Array.isArray(entries)) { const last = await remembered(); entries = last ? [{ handle: last, name: last.name }] : []; }
+    if (!handle) return entries;
+    const others = [];
+    for (const entry of entries) {
+      try { if (await handle.isSameEntry(entry.handle)) continue; } catch { /* 失效的旧入口仍保留，用户可重新选择目录。 */ }
+      others.push(entry);
+    }
+    entries = [{ handle, name }, ...others].slice(0, 5);
+    await setting('recent', entries); return entries;
   }
   // 检查读取的清单格式；未知版本和损坏清单不得被新草稿覆盖。
   function validate(data) {
@@ -26,16 +41,23 @@ window.JianyiDraftFolder = (() => {
     return data;
   }
   // 连接专用目录，不覆盖所选文件夹内的其他文件。
-  async function connect(parent) {
+  async function connect(parent, { create = true } = {}) {
     const permission = await parent.queryPermission({ mode: 'readwrite' });
     if (permission !== 'granted') throw new Error('请点击“重新授权文件夹”并允许读写');
     let root;
-    try { root = await parent.getDirectoryHandle('jianyi-drafts'); }
-    catch (error) { if (error.name !== 'NotFoundError') throw error; root = await parent.getDirectoryHandle('jianyi-drafts', { create: true }); }
+    // 清单所在目录和外层作品目录都可识别，避免误建嵌套 jianyi-drafts。
+    try { await parent.getFileHandle('project-index.json'); root = parent; }
+    catch (error) { if (error.name !== 'NotFoundError') throw error; }
+    if (!root && parent.name === 'jianyi-drafts') root = parent;
+    if (!root) {
+      try { root = await parent.getDirectoryHandle('jianyi-drafts', { create }); }
+      catch (error) { if (error.name === 'NotFoundError') throw new Error('未找到本地草稿，请选择作品目录或 jianyi-drafts 目录；保存当前作品请使用“另存到文件夹”'); throw error; }
+    }
     let manifest;
     try { manifest = await root.getFileHandle('project-index.json'); }
     catch (error) {
       if (error.name !== 'NotFoundError') throw error;
+      if (!create) throw new Error('未找到草稿清单，请选择已有草稿目录');
       for await (const entry of root.values()) throw new Error('jianyi-drafts 目录非空且缺少清单，请选择其他目录');
       manifest = await root.getFileHandle('project-index.json', { create: true });
       const writable = await manifest.createWritable({ mode: 'exclusive' });
@@ -45,7 +67,7 @@ window.JianyiDraftFolder = (() => {
     // 从磁盘读取最新版本，跨标签页修改不会使用内存中的陈旧副本。
     async function read() { return validate(JSON.parse(await (await manifest.getFile()).text())); }
     const identity = (await read()).id;
-    const assets = await root.getDirectoryHandle('assets', { create: true });
+    const assets = await root.getDirectoryHandle('assets', { create });
     // 写清单前先完成所有素材写入；异常时取消替换，保留上次完整清单。
     async function update(work) {
       const execute = async () => {
@@ -110,7 +132,7 @@ window.JianyiDraftFolder = (() => {
         return count;
       });
     }
-    return { list, get, save, change, clean, parent, name: parent.name + '/jianyi-drafts', isFolder: true };
+    return { list, get, save, change, clean, parent, root, name: root === parent ? parent.name : parent.name + '/jianyi-drafts', isFolder: true };
   }
-  return { connect, remembered };
+  return { connect, remembered, recent };
 })();
