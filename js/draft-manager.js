@@ -222,14 +222,14 @@
     if (working || saving || storageError || ((current || sources.length) && JSON.stringify(editor.snapshot().project) !== saved)) { event.preventDefault(); event.returnValue = ''; }
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden && !working && !saving && !editor.locked() && (current || sources.length)) save().catch(fail); });
-  // CLI 指定草稿可直接打开；连接失败保留服务后端，避免静默存入浏览器。
+  // 普通启动不弹列表；CLI 主动打开草稿库或恢复失败时展示列表。
   async function initialize() {
     state('未创建草稿'); locationState();
     try {
       const session = window.JianyiDraftRemote ? await window.JianyiDraftRemote.session() : null;
       locationState(); await list();
       if (session?.draftId) await operation(() => load(session.draftId));
-      if (!session?.draftId || storageError) dialog.showModal();
+      if ((session && !session.draftId) || storageError) dialog.showModal();
     } catch (error) { fail(error); if (!dialog.open) dialog.showModal(); }
   }
   initialize();
