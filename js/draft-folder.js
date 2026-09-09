@@ -93,6 +93,9 @@ window.JianyiDraftFolder = (() => {
     // 写清单前先完成所有素材写入；异常时取消替换，保留上次完整清单。
     async function update(work) {
       const execute = async () => {
+        let serverActive = false;
+        try { await root.getDirectoryHandle('.editor-server.lock'); serverActive = true; } catch (error) { if (error.name !== 'NotFoundError') throw error; }
+        if (serverActive) throw new Error('此库正在通过 CLI 编辑服务使用，请在服务打开的网页中保存，或停止服务后重试');
         const writable = await manifest.createWritable({ mode: 'exclusive' });
         try {
           const data = await read(), result = await work(data);

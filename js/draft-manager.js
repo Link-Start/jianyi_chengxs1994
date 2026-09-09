@@ -1,7 +1,7 @@
 'use strict';
 // 管理草稿选择、自动保存与切换；所有写操作串行执行。
 (() => {
-  let store = window.JianyiDraftStore, recentFolders = [];
+  let store = window.JianyiDraftRemote?.store || window.JianyiDraftStore, recentFolders = [];
   const editor = window.JianyiDraftEditor, folder = window.JianyiDraftFolder;
   const damaged = new Map();
   let current = null, saved = '', observed = '', changedAt = 0, working = false, saving = null, storageError = '', loadRequest = 0;
@@ -62,9 +62,13 @@
       button.onclick = () => operation(() => chooseFolder('open', entry)); recentList.append(button);
     }
     $('draft-folder-clean').hidden = !store.isFolder;
+    // CLI 编辑窗口固定连接启动时的库，避免误切到其他存储位置。
+    for (const id of ['draft-browser', 'draft-folder-pick', 'draft-folder-save-as', 'draft-recent']) if (store.isServer) $(id).hidden = true;
+    if (store.isServer) $('draft-folder-clean').hidden = true;
     dialog.querySelector('.draft-body > .hint').textContent = store.isFolder
       ? '草稿和素材写入所选文件夹；请备份整个 jianyi-drafts 目录。删除草稿后可手动清理未引用素材。不要在不同浏览器同时编辑同一目录。'
       : '草稿和素材仅保存在当前浏览器；清理站点数据会删除草稿。不同网址、浏览器的草稿不互通。';
+    if (store.isServer) dialog.querySelector('.draft-body > .hint').textContent = '通过本地服务保存到此草稿库。请保持 CLI 终端运行；结束前确认“已保存”。';
   }
   // 打开只切换列表，另存才复制当前作品；权限请求保持在用户点击事件内。
   async function chooseFolder(mode = 'open', entry = null) {
@@ -218,6 +222,16 @@
     if (working || saving || storageError || ((current || sources.length) && JSON.stringify(editor.snapshot().project) !== saved)) { event.preventDefault(); event.returnValue = ''; }
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden && !working && !saving && !editor.locked() && (current || sources.length)) save().catch(fail); });
-  state('未创建草稿'); locationState(); list().then(() => dialog.showModal()).catch(fail);
+  // CLI 指定草稿可直接打开；连接失败保留服务后端，避免静默存入浏览器。
+  async function initialize() {
+    state('未创建草稿'); locationState();
+    try {
+      const session = window.JianyiDraftRemote ? await window.JianyiDraftRemote.session() : null;
+      locationState(); await list();
+      if (session?.draftId) await operation(() => load(session.draftId));
+      if (!session?.draftId || storageError) dialog.showModal();
+    } catch (error) { fail(error); if (!dialog.open) dialog.showModal(); }
+  }
+  initialize();
   folder.recent().then(entries => { recentFolders = entries; if (!working) locationState(); }).catch(() => {});
 })();
