@@ -260,7 +260,7 @@ function draw() {
   $('track').setAttribute('aria-valuenow', t.toFixed(2)); controls();
 }
 // 为各素材连接共用音量与导出节点，音频节点只创建一次。
-async function setupAudio() {
+async function setupAudio(resume = true) {
   if (!audioCtx) {
     audioCtx = new AudioContext(); master = audioCtx.createGain();
     audioDest = audioCtx.createMediaStreamDestination(); master.connect(audioCtx.destination); master.connect(audioDest);
@@ -269,7 +269,8 @@ async function setupAudio() {
     if (!source.node) { source.node = audioCtx.createMediaElementSource(source.media); source.node.connect(master); }
   }
   master.gain.value = Number($('volume').value) / 100;
-  await audioCtx.resume();
+  // 自动恢复草稿只解码配乐，用户点击播放后再唤醒受手势限制的音频上下文。
+  if (resume) await audioCtx.resume();
 }
 // 从当前位置连续预览，作品结束后再次播放会从头开始。
 async function play() {

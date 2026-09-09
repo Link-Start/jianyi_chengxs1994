@@ -92,7 +92,7 @@ window.JianyiDraftEditor = (() => {
         else throw new Error('未知画中画类型');
         preparedStickers.push({ ...decoded, ...item, file: value, url: address });
       }
-      if (project.audio.length) await setupAudio();
+      if (project.audio.length) await setupAudio(false);
       const buffers = new Map();
       for (const item of project.audio) {
         interval(item, 'start', 'end', duration);
