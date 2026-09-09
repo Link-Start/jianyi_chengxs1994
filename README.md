@@ -1,4 +1,4 @@
-# 剪易 Jianyi
+# 剪易 EasyCut
 
 一个纯浏览器（开箱即用）视频编辑器，使用原生 HTML、CSS 和 JavaScript 构建。基础剪辑、预览和导出均在本机浏览器内完成，无需后端，也不会上传素材。
 
@@ -21,31 +21,31 @@
 ## 功能截图
 
 ### 主界面
-![Jianyi](readme_file/index.png)
+![EasyCut](readme_file/index.png)
 
 ### 导入视频
-![Jianyi](readme_file/video.png)
+![EasyCut](readme_file/video.png)
 
 ### 音频
-![Jianyi](readme_file/audio.png)
+![EasyCut](readme_file/audio.png)
 
 ### 文本
 **支持自定义文字样式**
-![Jianyi](readme_file/text.png)
+![EasyCut](readme_file/text.png)
 
 ### 贴纸
 **支持导入图片、透明PNG和动态GIF作为贴纸**
-![Jianyi](readme_file/stickers.png)
+![EasyCut](readme_file/stickers.png)
 
 ### 特效
-![Jianyi](readme_file/special.png)
+![EasyCut](readme_file/special.png)
 
 ### 转场
-![Jianyi](readme_file/transfer.png)
+![EasyCut](readme_file/transfer.png)
 
 ### 画中画
 **支持导入图片和视频作为画中画**
-![Jianyi](readme_file/pic_in_pic.png)
+![EasyCut](readme_file/pic_in_pic.png)
 
 ## 使用流程
 
@@ -55,7 +55,7 @@
 4. 拖动覆盖轨道片段调整时间，拖动两端调整时长；在预览中拖动文字和画中画调整位置。
 5. 添加特效或转场，预览后点击右上角「导出」。
 
-在线体验：[https://chengxs1994.github.io/jianyi/](https://chengxs1994.github.io/jianyi/)
+在线体验：[https://chengxs1994.github.io/EasyCut/](https://chengxs1994.github.io/EasyCut/)
 
 ## 开发中功能
 
@@ -112,9 +112,22 @@ js/draft-folder.js     用户授权文件夹存储、素材复用与手动清理
 js/draft-editor.js     工程快照、媒体解码与恢复适配
 js/draft-manager.js    草稿列表、自动保存、管理与失败提示
 vendor/               浏览器可直接使用的导出组件及许可证
+cli/                  零 npm 依赖的结构化剪辑 CLI、配置示例与检查
+skills/jianyi-editor/  AI 调用 CLI 生成草稿的 Skill
 package.json          导出组件构建配置
 package-lock.json     固定构建依赖版本
 ```
+
+## 结构化剪辑 CLI（试用版）
+
+支持用 JSON 配置生成可在网页打开的本地草稿，只需 Node.js，无需 npm 安装依赖或 ffprobe。涵盖视频拼接裁剪、多段文字、音频、贴纸、画中画及已有特效转场。使用说明见 [CLI 文档](cli/README.md)，示例见 [example.json](cli/example.json)。供 AI 调用的 [jianyi-editor Skill](skills/jianyi-editor/SKILL.md) 已随项目提供，尚未安装到你的个人 Skill 目录。
+
+```sh
+node cli/jianyi.mjs validate /path/to/edit.json
+node cli/jianyi.mjs create /path/to/edit.json --output /path/to/workspace
+```
+
+在网页草稿列表选择输出的 workspace 目录即可打开调优。CLI 不渲染视频，素材真实时长和解码由网页检查；第一版只创建新草稿目录，不覆盖已有草稿。
 
 ## 开发
 

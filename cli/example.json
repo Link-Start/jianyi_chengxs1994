@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "产品介绍",
+  "ratio": "9:16",
+  "videos": [
+    { "file": "./素材/展示.mp4", "in": 0, "out": 3 },
+    { "file": "./素材/细节.mp4", "in": 0, "out": 3, "effect": { "kind": "warm", "strength": 0.6 }, "transition": { "kind": "dissolve", "duration": 0.4 } }
+  ],
+  "texts": [
+    { "text": "新品上市", "start": 0, "end": 3, "size": 100, "position": 0.5 },
+    { "text": "了解更多", "start": 3, "end": 6, "color": "#ffdb45" }
+  ],
+  "audio": [
+    { "file": "./素材/音乐.wav", "start": 0, "end": 6, "volume": 30 }
+  ],
+  "stickers": [
+    { "file": "./素材/贴纸.png", "start": 0, "end": 3, "x": 0.8, "y": 0.2, "size": 0.2 }
+  ]
+}

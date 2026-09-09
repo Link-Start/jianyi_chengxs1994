@@ -1,5 +1,5 @@
 {
-  "name": "jianyi",
+  "name": "easycut",
   "private": true,
   "scripts": {
     "build:export": "esbuild js/export-mux.js --bundle --minify --format=iife --platform=browser --outfile=vendor/mp4-mov.js"
