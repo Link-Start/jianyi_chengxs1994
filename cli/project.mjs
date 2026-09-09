@@ -1,6 +1,8 @@
-import { readFile, realpath, stat, mkdir, copyFile, writeFile, rm } from 'node:fs/promises';
+import { readFile, realpath, stat, mkdir, copyFile, writeFile, rm, rename, readdir } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
+import { setTimeout as delay } from 'node:timers/promises';
 import { randomUUID } from 'node:crypto';
 
 const types = { '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm', '.m4v': 'video/mp4', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.ogg': 'audio/ogg', '.flac': 'audio/flac', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
@@ -116,28 +118,66 @@ export async function compile(configFile) {
   return { name, duration, project, assets: [...assets.values()], warnings: [warning] };
 }
 
-// 仅创建全新专用目录；绝不修改已有目录或正在被网页编辑的清单。
-export async function create(compiled, output) {
+// 固定用户级默认目录，不随终端工作目录或配置文件位置改变。
+export function defaultLibrary() { return path.join(os.homedir(), 'EasyCut'); }
+// 校验库格式与已合并记录，避免损坏清单被新作品覆盖。
+function validateLibrary(data) {
+  if (data?.format !== 'jianyi-folder-drafts' || data.version !== 1 || !Array.isArray(data.drafts) || (data.cliImports !== undefined && !Array.isArray(data.cliImports))) throw new Error('不支持或损坏的草稿库格式');
+  return data;
+}
+// 初始化使用短期目录锁；发布完成后 CLI 永远不改写网页持有的主清单。
+async function library(output) {
   const parent = path.resolve(output), root = path.join(parent, 'jianyi-drafts');
   await mkdir(parent, { recursive: true });
-  try { await mkdir(root); } catch (error) { if (error.code === 'EEXIST') throw new Error('目标已有 jianyi-drafts，请换一个输出目录；第一版不覆盖或追加已有草稿'); throw error; }
+  const lock = path.join(parent, '.easycut-init.lock'), deadline = Date.now() + 15000;
+  while (true) {
+    try { await mkdir(lock); break; }
+    catch (error) { if (error.code !== 'EEXIST') throw error; if (Date.now() >= deadline) throw new Error('草稿库初始化忙，请稍后重试；若上次进程中断，请确认没有生成任务后移除 .easycut-init.lock'); await delay(100); }
+  }
+  const staging = path.join(parent, '.easycut-library-' + randomUUID());
   try {
-    await mkdir(path.join(root, 'assets'));
+    let exists = true;
+    try { await stat(root); } catch (error) { if (error.code !== 'ENOENT') throw error; exists = false; }
+    if (exists) validateLibrary(JSON.parse(await readFile(path.join(root, 'project-index.json'), 'utf8')));
+    else {
+      await mkdir(staging); await mkdir(path.join(staging, 'assets'));
+      await writeFile(path.join(staging, 'project-index.json'), JSON.stringify({ format: 'jianyi-folder-drafts', version: 1, id: randomUUID(), drafts: [] }));
+      await rename(staging, root);
+    }
+    await mkdir(path.join(root, 'cli-drafts'), { recursive: true });
+    return { parent, root };
+  } finally { await rm(staging, { recursive: true, force: true }); await rm(lock, { recursive: true, force: true }); }
+}
+// 每次独立写入素材和草稿，再原子发布整个包，支持多个 CLI 与网页并行工作。
+export async function create(compiled, output = defaultLibrary()) {
+  const { parent, root } = await library(output), id = randomUUID();
+  const staging = path.join(root, 'cli-drafts', '.pending-' + id), published = path.join(root, 'cli-drafts', id);
+  await mkdir(staging); await mkdir(path.join(staging, 'assets'));
+  try {
     for (const asset of compiled.assets) {
-      await copyFile(asset.original, path.join(root, 'assets', asset.id), constants.COPYFILE_EXCL);
-      const current = await stat(asset.original), copied = await stat(path.join(root, 'assets', asset.id));
+      const target = path.join(staging, 'assets', asset.id);
+      await copyFile(asset.original, target, constants.COPYFILE_EXCL);
+      const current = await stat(asset.original), copied = await stat(target);
       if (current.size !== asset.size || current.mtimeMs !== asset.lastModified || copied.size !== asset.size) throw new Error(`复制期间素材发生变化：${asset.name}`);
     }
-    const now = Date.now(), draft = { id: randomUUID(), name: compiled.name, createdAt: now, updatedAt: now, revision: 1, schemaVersion: 1, project: compiled.project, assetIds: compiled.assets.map(a => a.id), assetInfo: compiled.assets.map(({ original, ...info }) => info), size: compiled.assets.reduce((sum, a) => sum + a.size, 0), duration: compiled.duration, cover: '' };
-    await writeFile(path.join(root, 'project-index.json'), JSON.stringify({ format: 'jianyi-folder-drafts', version: 1, id: randomUUID(), drafts: [draft] }, null, 2), { flag: 'wx' });
-    return { id: draft.id, name: draft.name, folder: parent, duration: draft.duration, assets: draft.assetIds.length, warnings: compiled.warnings, next: '在网页草稿列表点击“打开本地草稿”，选择 folder 指向的目录或内部 jianyi-drafts，然后打开此草稿。' };
-  } catch (error) { await rm(root, { recursive: true, force: true }); throw error; }
+    const now = Date.now(), draft = { id, name: compiled.name, createdAt: now, updatedAt: now, revision: 1, schemaVersion: 1, project: compiled.project, assetIds: compiled.assets.map(a => a.id), assetInfo: compiled.assets.map(({ original, ...info }) => ({ ...info, cliPackage: id })), size: compiled.assets.reduce((sum, a) => sum + a.size, 0), duration: compiled.duration, cover: '' };
+    await writeFile(path.join(staging, 'draft.json'), JSON.stringify(draft, null, 2), { flag: 'wx' });
+    await rename(staging, published);
+    return { id, name: draft.name, folder: parent, duration: draft.duration, assets: draft.assetIds.length, warnings: compiled.warnings, next: '在最新版剪易打开此草稿库；已打开时点击“刷新列表”，即可看到新草稿。' };
+  } catch (error) { await rm(staging, { recursive: true, force: true }); throw error; }
 }
-
-// 只读现有清单，供 AI 查看网页调优后的快照；不会触发网页保存或解码。
-export async function readDrafts(folder) {
+// 合并主清单和 CLI 独立发布的草稿；已被网页处理的包不再次导入或复活。
+export async function readDrafts(folder = defaultLibrary()) {
   const root = path.join(path.resolve(folder), 'jianyi-drafts');
-  const data = JSON.parse(await readFile(path.join(root, 'project-index.json'), 'utf8'));
-  if (data?.format !== 'jianyi-folder-drafts' || data.version !== 1 || !Array.isArray(data.drafts)) throw new Error('不支持的草稿目录格式');
-  return data.drafts;
+  const data = validateLibrary(JSON.parse(await readFile(path.join(root, 'project-index.json'), 'utf8')));
+  const seen = new Set([...(data.cliImports || []), ...data.drafts.map(d => d.id)]);
+  let entries = [];
+  try { entries = await readdir(path.join(root, 'cli-drafts'), { withFileTypes: true }); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !/^[a-f0-9-]{36}$/i.test(entry.name) || seen.has(entry.name)) continue;
+    const draft = JSON.parse(await readFile(path.join(root, 'cli-drafts', entry.name, 'draft.json'), 'utf8'));
+    if (draft.id !== entry.name || !Array.isArray(draft.assetInfo) || !Array.isArray(draft.assetIds)) throw new Error('CLI 草稿包损坏：' + entry.name);
+    data.drafts.push(draft);
+  }
+  return data.drafts.sort((a, b) => b.updatedAt - a.updatedAt);
 }

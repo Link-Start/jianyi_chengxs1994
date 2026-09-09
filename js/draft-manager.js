@@ -7,7 +7,7 @@
   let current = null, saved = '', observed = '', changedAt = 0, working = false, saving = null, storageError = '', loadRequest = 0;
   const dialog = $('draft-dialog');
   dialog.setAttribute('aria-label', '我的草稿');
-  dialog.querySelector('.draft-body').innerHTML = '<div class="draft-list-title"><span>我的草稿</span><button id="draft-new" type="button">＋ 新建草稿</button></div><div id="draft-list"></div><p id="draft-message" role="status"></p><p class="hint">草稿和素材仅保存在当前浏览器；清理站点数据会删除草稿。不同网址、浏览器的草稿不互通。</p>';
+  dialog.querySelector('.draft-body').innerHTML = '<div class="draft-list-title"><span>我的草稿</span><button id="draft-refresh" type="button">刷新列表</button><button id="draft-new" type="button">＋ 新建草稿</button></div><div id="draft-list"></div><p id="draft-message" role="status"></p><p class="hint">草稿和素材仅保存在当前浏览器；清理站点数据会删除草稿。不同网址、浏览器的草稿不互通。</p>';
   const locations = document.createElement('div'); locations.className = 'draft-locations';
   locations.innerHTML = '<div class="draft-location-actions"><button id="draft-browser">浏览器草稿</button><button id="draft-folder-pick">打开本地草稿</button><button id="draft-folder-save-as">另存到文件夹</button><button id="draft-folder-clean" hidden>清理未引用素材</button></div><p id="draft-location"></p><div id="draft-recent" hidden><p class="hint">最近目录 · 点击打开，必要时重新授权</p><div class="draft-location-actions" id="draft-recent-list"></div></div>';
   dialog.querySelector('.draft-body').prepend(locations);
@@ -187,6 +187,7 @@
   }
   $('draft-open').onclick = () => operation(show);
   $('draft-new').onclick = () => operation(create);
+  $('draft-refresh').onclick = () => operation(show);
   $('draft-folder-pick').onclick = () => operation(() => chooseFolder());
   $('draft-folder-save-as').onclick = () => operation(() => chooseFolder('save-as'));
   $('draft-browser').onclick = () => operation(browserDrafts);
@@ -194,7 +195,7 @@
   $('draft-folder-clean').onclick = () => operation(async () => {
     await preserve();
     if (confirm('清理 jianyi-drafts/assets 中未被任何草稿引用的素材副本？不会删除原始素材，清理无法撤销。')) {
-      const count = await store.clean(); $('draft-message').textContent = `已清理 ${count} 个未引用素材文件`;
+      const count = await store.clean(); $('draft-message').textContent = `已清理 ${count} 个未引用素材文件或草稿包`;
     }
   });
   saveButton.onclick = () => operation(save);

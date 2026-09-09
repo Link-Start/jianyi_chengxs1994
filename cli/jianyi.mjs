@@ -1,5 +1,5 @@
 import { parseArgs } from 'node:util';
-import { compile, create, readDrafts } from './project.mjs';
+import { compile, create, readDrafts, defaultLibrary } from './project.mjs';
 
 let jsonOutput = process.argv.includes('--json');
 // 命令行默认面向用户显示摘要；--json 为 AI 和脚本保留结构化输出。
@@ -7,12 +7,12 @@ async function main() {
   const { values, positionals } = parseArgs({ allowPositionals: true, options: { output: { type: 'string' }, draft: { type: 'string' }, help: { type: 'boolean' }, json: { type: 'boolean' } } });
   jsonOutput = !!values.json;
   const [command, input] = positionals;
-  if (values.help || !command) return { usage: ['node cli/jianyi.mjs create edit.json --output ./workspace', 'node cli/jianyi.mjs validate edit.json', 'node cli/jianyi.mjs list ./workspace', 'node cli/jianyi.mjs inspect ./workspace --draft <id>', '以上命令均支持 --json，供 AI 或脚本读取'], note: 'Node.js 18.3+；无需 npm install 或 ffprobe。create 已包含检查，时间单位为秒。' };
-  if (!input || positionals.length !== 2) throw new Error('需要一个配置文件或草稿父目录参数，请使用 --help');
+  if (values.help || !command) return { usage: ['node cli/jianyi.mjs create edit.json', 'node cli/jianyi.mjs validate edit.json', 'node cli/jianyi.mjs list', 'node cli/jianyi.mjs inspect --draft <id>', '以上命令均支持 --json，供 AI 或脚本读取'], note: `Node.js 18.3+；无需 npm install 或 ffprobe。默认草稿库：${defaultLibrary()}。--output 可指定其他草稿库。create 已包含检查，时间单位为秒。` };
+  if (positionals.length > 2 || (!input && !['list', 'inspect'].includes(command))) throw new Error('需要一个配置文件或草稿父目录参数，请使用 --help');
   if (values.output !== undefined && command !== 'create') throw new Error('--output 仅用于 create');
   if (values.draft !== undefined && command !== 'inspect') throw new Error('--draft 仅用于 inspect');
   if (command === 'validate' || command === 'create') {
-    if (command === 'create' && !values.output?.trim()) throw new Error('create 必须指定 --output');
+    if (values.output !== undefined && !values.output.trim()) throw new Error('--output 不能为空');
     const result = await compile(input);
     return command === 'create' ? create(result, values.output) : { valid: true, name: result.name, duration: result.duration, assets: result.assets.length, warnings: result.warnings };
   }

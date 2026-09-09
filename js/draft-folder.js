@@ -36,7 +36,7 @@ window.JianyiDraftFolder = (() => {
   }
   // 检查读取的清单格式；未知版本和损坏清单不得被新草稿覆盖。
   function validate(data) {
-    if (data.format !== marker || data.version !== 1 || !uuid.test(data.id) || !Array.isArray(data.drafts)) throw new Error('草稿目录清单损坏或版本不支持，请从备份恢复');
+    if (data.format !== marker || data.version !== 1 || !uuid.test(data.id) || !Array.isArray(data.drafts) || (data.cliImports !== undefined && !Array.isArray(data.cliImports))) throw new Error('草稿目录清单损坏或版本不支持，请从备份恢复');
     for (const draft of data.drafts) { key(draft.id); if (!Array.isArray(draft.assetIds) || !Array.isArray(draft.assetInfo)) throw new Error('草稿素材清单无效'); draft.assetIds.forEach(key); }
     return data;
   }
@@ -65,9 +65,31 @@ window.JianyiDraftFolder = (() => {
       catch (failure) { await writable.abort().catch(() => {}); throw failure; }
     }
     // 从磁盘读取最新版本，跨标签页修改不会使用内存中的陈旧副本。
-    async function read() { return validate(JSON.parse(await (await manifest.getFile()).text())); }
+    async function read() {
+      const data = validate(JSON.parse(await (await manifest.getFile()).text()));
+      const seen = new Set([...(data.cliImports || []), ...data.drafts.map(d => d.id)]);
+      let incoming;
+      try { incoming = await root.getDirectoryHandle('cli-drafts'); } catch (error) { if (error.name !== 'NotFoundError') throw error; }
+      if (incoming) for await (const [id, entry] of incoming.entries()) {
+        if (entry.kind !== 'directory' || !uuid.test(id) || seen.has(id)) continue;
+        const draft = JSON.parse(await (await (await entry.getFileHandle('draft.json')).getFile()).text());
+        if (draft.id !== id) throw new Error('CLI 草稿包标识不一致');
+        validate({ ...data, drafts: [draft] });
+        for (const info of draft.assetInfo) { key(info.id); if (info.cliPackage !== id) throw new Error('CLI 素材目录不一致'); }
+        data.drafts.push(draft); seen.add(id);
+      }
+      // 持久化已处理记录，删除草稿后仍不会被磁盘包重新导入。
+      data.cliImports = [...new Set([...(data.cliImports || []), ...data.drafts.flatMap(d => d.assetInfo.map(a => a.cliPackage).filter(Boolean))])];
+      return data;
+    }
     const identity = (await read()).id;
     const assets = await root.getDirectoryHandle('assets', { create });
+    // CLI 素材留在独立包中，网页首次编辑保存时按现有逻辑写入公共素材目录。
+    async function assetFile(info) {
+      if (!info.cliPackage) return (await assets.getFileHandle(key(info.id))).getFile();
+      const incoming = await root.getDirectoryHandle('cli-drafts'), entry = await incoming.getDirectoryHandle(key(info.cliPackage));
+      return (await (await entry.getDirectoryHandle('assets')).getFileHandle(key(info.id))).getFile();
+    }
     // 写清单前先完成所有素材写入；异常时取消替换，保留上次完整清单。
     async function update(work) {
       const execute = async () => {
@@ -88,7 +110,7 @@ window.JianyiDraftFolder = (() => {
       if (!draft) throw new Error('草稿已被删除');
       const files = new Map();
       for (const info of draft.assetInfo) {
-        try { const blob = await (await assets.getFileHandle(key(info.id))).getFile(); if (blob.size === info.size) files.set(info.id, { ...info, blob }); }
+        try { const blob = await assetFile(info); if (blob.size === info.size) files.set(info.id, { ...info, blob }); }
         catch (error) { if (error.name !== 'NotFoundError') throw error; }
       }
       return { draft, files };
@@ -102,7 +124,7 @@ window.JianyiDraftFolder = (() => {
         const provided = new Map(files.map(file => [file.id, file]));
         for (const info of draft.assetInfo) {
           let existing;
-          try { existing = await (await assets.getFileHandle(key(info.id))).getFile(); }
+          try { existing = await assetFile(info); }
           catch (error) { if (error.name !== 'NotFoundError') throw error; }
           if (existing?.size === info.size) continue;
           const file = provided.get(info.id); if (!file?.blob) throw new Error(`素材缺失：${info.name}，请重新关联`);
@@ -129,6 +151,13 @@ window.JianyiDraftFolder = (() => {
       return update(async data => {
         const used = new Set(data.drafts.flatMap(item => item.assetIds)); let count = 0;
         for await (const [name, entry] of assets.entries()) if (entry.kind === 'file' && uuid.test(name) && !used.has(name)) { await assets.removeEntry(name); count++; }
+        let incoming;
+        try { incoming = await root.getDirectoryHandle('cli-drafts'); } catch (error) { if (error.name !== 'NotFoundError') throw error; }
+        const packages = new Set(data.drafts.flatMap(d => d.assetInfo.map(a => a.cliPackage).filter(Boolean)));
+        if (incoming) for (const id of data.cliImports || []) {
+          if (packages.has(id)) continue;
+          try { await incoming.removeEntry(key(id), { recursive: true }); count++; } catch (error) { if (error.name !== 'NotFoundError') throw error; }
+        }
         return count;
       });
     }

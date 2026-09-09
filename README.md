@@ -123,10 +123,10 @@ package-lock.json     固定构建依赖版本
 支持用 JSON 配置生成可在网页打开的本地草稿，只需 Node.js，无需 npm 安装依赖或 ffprobe。涵盖视频拼接裁剪、多段文字、音频、贴纸、画中画及已有特效转场。使用说明见 [CLI 文档](cli/README.md)，示例见 [example.json](cli/example.json)。供 AI 调用的 [jianyi-editor Skill](skills/jianyi-editor/SKILL.md) 已随项目提供，尚未安装到你的个人 Skill 目录。
 
 ```sh
-node cli/jianyi.mjs create /path/to/edit.json --output /path/to/workspace
+node cli/jianyi.mjs create /path/to/edit.json
 ```
 
-在网页点击「草稿 → 打开本地草稿」，选择输出的 workspace 或内部 jianyi-drafts 目录即可打开调优。create 已包含校验；AI 调用追加 `--json`。CLI 不渲染视频，素材真实时长和解码由网页检查；第一版只创建新草稿目录，不覆盖已有草稿。
+在网页点击「草稿 → 打开本地草稿」，选择默认 EasyCut 草稿库或内部 jianyi-drafts 目录即可打开调优。后续生成后点击「刷新列表」。--output 可指定其他库。create 已包含校验；AI 调用追加 `--json`。请使用最新版网页读取 CLI 草稿包。CLI 不渲染视频，素材真实时长和解码由网页检查；默认追加到用户主目录下 EasyCut 草稿库，支持多次和并发生成，不覆盖已有草稿。
 
 ## 开发
 
