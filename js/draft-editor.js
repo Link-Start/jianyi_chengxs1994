@@ -32,7 +32,7 @@ window.JianyiDraftEditor = (() => {
     return { project: JSON.parse(JSON.stringify(project)), files: [...files.values()] };
   }
   // 解码所有素材后再替换当前作品，失败时释放临时资源并保留原作品。
-  async function restore(project, records) {
+  async function restore(project, records, { history = false } = {}) {
     if (busy || switching) throw new Error('请等待当前操作结束');
     if (project.schemaVersion !== 1) throw new Error('不支持此草稿版本，请使用匹配版本的剪易');
     for (const key of ['sources', 'clips', 'texts', 'stickers', 'audio', 'fonts']) if (!Array.isArray(project[key])) throw new Error('草稿数据不完整');
@@ -143,6 +143,7 @@ window.JianyiDraftEditor = (() => {
     } finally {
       if (!committed) { nextId = originalNextId; for (const media of mediaList) { media.removeAttribute('src'); media.load(); } urls.forEach(URL.revokeObjectURL); }
       busy = ''; controls();
+      if (committed && !history) window.dispatchEvent(new Event('easycut-project-restored'));
     }
   }
   // 为列表生成小尺寸封面，避免存储整张预览画布。
