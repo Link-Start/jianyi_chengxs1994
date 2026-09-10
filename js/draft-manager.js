@@ -176,11 +176,26 @@
       title.textContent = item.name; meta.textContent = `${new Date(item.updatedAt).toLocaleString()} · ${time(item.duration)} · ${(item.size / 1024 / 1024).toFixed(1)} MB`;
       if (damaged.has(item.id)) meta.textContent += ` · 无法恢复：${damaged.get(item.id)}`;
       detail.append(title, meta); button.append(cover, detail); button.onclick = () => operation(() => load(item.id));
+      const identity = document.createElement('div'); identity.className = 'draft-identity';
+      const label = document.createElement('label'); label.textContent = 'ID';
+      const idField = document.createElement('input'); idField.type = 'text'; idField.readOnly = true; idField.value = item.id;
+      idField.id = 'draft-id-' + item.id; label.htmlFor = idField.id; idField.setAttribute('aria-label', item.name + ' 的草稿 ID');
+      const copyId = document.createElement('button'); copyId.textContent = '复制 ID';
+      // 复制只读取标识；剪贴板不可用时选中完整 ID，支持手动复制。
+      copyId.onclick = async () => {
+        try {
+          if (!navigator.clipboard?.writeText) throw new Error('剪贴板不可用');
+          await navigator.clipboard.writeText(item.id); $('draft-message').textContent = '已复制草稿 ID：' + item.id;
+        } catch {
+          idField.focus(); idField.select(); $('draft-message').textContent = '无法自动复制，已选中 ID，请按 ⌘/Ctrl+C 复制。';
+        }
+      };
+      identity.append(label, idField, copyId);
       const actions = document.createElement('div'); actions.className = 'draft-row-actions';
       for (const [name, handler] of [['重命名', rename], ['复制', duplicate], ['重新关联素材', repair], ['删除', remove]]) {
         const action = document.createElement('button'); action.textContent = name; action.onclick = () => operation(() => handler(item)); actions.append(action);
       }
-      row.append(button, actions); container.append(row);
+      row.append(button, identity, actions); container.append(row);
     }
   }
   // 打开列表暂停播放并刷新数据，不自动恢复任何草稿。
