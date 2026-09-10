@@ -44,6 +44,7 @@
 - 语义化剪辑：通过 AI Skill 将自然语言需求转换为剪辑配置，生成可继续编辑的本地草稿。
 - 结构化 CLI：使用 JSON 配置编排视频、文字、配乐、贴纸、特效和转场，支持向同一草稿库追加作品。
 - 生成后直接打开：通过 `--open` 进入网页预览调优，修改保存回同一本地草稿库。
+- 多轮语义化调整：Skill 可读取已保存草稿，修改文字、位置、音量和片段时间，通过 CLI `update` 生成独立副本，保留原稿与未修改的效果。
 
 ## 功能截图
 
@@ -147,6 +148,7 @@ CLI 是上述 Skill 使用的执行接口，也可以独立使用 JSON 配置生
 node cli/jianyi.mjs create /path/to/edit.json
 node cli/jianyi.mjs create /path/to/edit.json --open
 node cli/jianyi.mjs open --draft 草稿ID
+node cli/jianyi.mjs update changes.json --draft 草稿ID --open
 ```
 
 加 `--open` 可在生成后直接打开网页调优，修改保存回同一草稿库，无需手动选择文件夹。已有草稿用 `open --draft 草稿ID`，只运行 `open` 则显示草稿列表。**保持终端运行，网页显示「已保存」后再按 Ctrl+C 停止。** 本地服务仅监听本机，不上传到外网，也无需额外依赖。
