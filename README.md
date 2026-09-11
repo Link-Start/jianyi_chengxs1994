@@ -1,4 +1,4 @@
-# 剪易 EasyCut
+# [剪易 EasyCut](https://github.com/chengxs1994/EasyCut)
 
 一个纯浏览器（开箱即用）视频编辑器，支持通过 AI Skill 进行语义化剪辑，使用原生 HTML、CSS 和 JavaScript 构建。基础剪辑、预览和导出均在本机浏览器内完成，无需后端，也不会上传素材。
 
