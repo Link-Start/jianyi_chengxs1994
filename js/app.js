@@ -1210,7 +1210,8 @@ function syncPlayhead() {
   const content = $('timeline-content').getBoundingClientRect(), ruler = $('ruler').getBoundingClientRect();
   const t = scrubTarget ?? position();
   head.style.left = `${ruler.left - content.left + (total() ? t / total() : 0) * ruler.width}px`;
-  head.style.top = `${$('ruler').offsetTop + 12}px`;
+  // 使用吸顶后的实际位置，让播放头手柄随刻度栏固定，竖线仍覆盖下方轨道。
+  head.style.top = `${ruler.top - content.top}px`;
   head.setAttribute('aria-valuemax', total().toFixed(3)); head.setAttribute('aria-valuenow', t.toFixed(3));
   head.setAttribute('aria-valuetext', time(t)); head.setAttribute('aria-disabled', String(!clips.length || !!busy));
 }
@@ -1270,6 +1271,7 @@ function initPlayhead() {
     scrubTarget = event.key === 'Home' ? 0 : event.key === 'End' ? total() : Math.max(0, Math.min(total(), t + (event.key === 'ArrowLeft' ? -1 : 1) / 30));
     scrubPending = scrubTarget; syncPlayhead(); flushScrub();
   };
+  document.querySelector('.timeline-scroll').addEventListener('scroll', syncPlayhead, { passive: true });
   new ResizeObserver(syncPlayhead).observe($('timeline-content'));
 }
 
