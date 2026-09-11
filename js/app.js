@@ -161,6 +161,7 @@ function render() {
       const rect = button.getBoundingClientRect();
       showInspector('video'); navigate(index, item.in + Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)) * length(item));
     };
+    window.EasyCutTimeline?.bind(button, item);
     $('clips').append(button); accumulated += length(item);
   });
   sources.forEach(source => {
@@ -710,7 +711,9 @@ function beginTrackDrag(event, kind, item, button) {
 // 拖动中约束时间范围并同步属性，避免重建正在捕获指针的按钮。
 function moveTrackDrag(event) {
   const drag = trackDrag; if (!drag || event.pointerId !== drag.id) return;
-  const delta = (event.clientX - drag.x) / drag.width * total(), min = Math.min(.1, total());
+  let delta = (event.clientX - drag.x) / drag.width * total();
+  delta = window.EasyCutTimeline?.overlayDelta(drag, delta, event) ?? delta;
+  const min = Math.min(.1, total());
   if (Math.abs(event.clientX - drag.x) > 2) drag.moved = true;
   if (drag.edge === 'left') drag.item.start = Math.max(0, Math.min(drag.end - min, drag.start + delta));
   else if (drag.edge === 'right') drag.item.end = Math.min(total(), Math.max(drag.start + min, drag.end + delta));
@@ -727,7 +730,7 @@ function moveTrackDrag(event) {
 // 松开时刷新轨道排列并定位预览，取消拖动则恢复原区间。
 function finishTrackDrag(event, cancel) {
   const drag = trackDrag; if (!drag || event.pointerId !== drag.id) return;
-  trackDrag = null;
+  trackDrag = null; window.EasyCutTimeline?.clear();
   if (cancel) { drag.item.start = drag.start; drag.item.end = drag.end; if (drag.kind === 'audio' || drag.item.media || drag.item.animation) drag.item.in = drag.sourceIn; }
   renderTexts(); renderStickers(); renderAudio(); draw();
   if (!cancel) navigateTime(drag.item.start);

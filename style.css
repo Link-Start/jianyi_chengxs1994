@@ -20,3 +20,9 @@
 .draft-locations{border-bottom:1px solid #414141;margin-bottom:14px;padding-bottom:8px}.draft-location-actions{display:flex;flex-wrap:wrap;gap:6px}.draft-location-actions button{font-size:11px;padding:6px 8px}#draft-location{font-size:11px;color:var(--mint);overflow-wrap:anywhere}
 .draft-row{margin-bottom:26px}.draft-row:last-child{margin-bottom:0}.draft-row-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}.draft-row-actions button{font-size:11px;padding:5px 8px}.draft-item strong{overflow-wrap:anywhere}.draft-cover{object-fit:contain;flex-shrink:0}.draft-body{max-height:70vh;overflow:auto}#draft-message{color:#e9bb73;overflow-wrap:anywhere}#draft-save-state{font-size:11px;color:#aaa;white-space:nowrap}.top-actions{flex-wrap:wrap}@media(max-width:760px){#draft-save-state{display:none}}
 .draft-identity{display:flex;align-items:center;gap:6px;margin-top:6px;min-width:0}.draft-identity label{font-size:11px;color:#999}.draft-identity input{flex:1;min-width:0;width:0;font:11px monospace;padding:6px}.draft-identity button{flex-shrink:0;font-size:11px;padding:5px 8px}
+
+/* 主视频手柄独立于标题样式，拖动预览及吸附标记不拦截指针。 */
+.clip{touch-action:none;cursor:grab}.clip .edge{z-index:2}.clip.dragging{opacity:.7;cursor:grabbing}.clip .edge:hover{background:#ffffff80}
+.timeline-snap-guide{position:absolute;top:0;bottom:0;width:2px;background:var(--mint);z-index:8;pointer-events:none;transform:translateX(-1px)}
+.timeline-drag-hint{position:absolute;right:8px;top:2px;background:#111e;padding:4px 8px;border-radius:4px;z-index:9;pointer-events:none}
+#timeline-snap[aria-pressed=true]{color:var(--mint);background:#163637}
