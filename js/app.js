@@ -770,6 +770,7 @@ function initTracks() {
 
 // 按选中类型展示属性，保留各类型的编辑状态。
 function showInspector(kind) {
+  window.EasyCutMobile?.show('props');
   inspectorMode = kind;
   const names = { video: '视频属性', text: '文字属性', sticker: '画中画 / 贴纸属性', audio: '音频属性' };
   $('inspector-title').textContent = names[kind];
@@ -782,6 +783,7 @@ function showInspector(kind) {
 }
 // 切换素材分类，仅展示当前已支持的素材类型。
 function showLibrary(kind) {
+  window.EasyCutMobile?.show('library');
   document.querySelectorAll('[data-library]').forEach(button => {
     const active = button.dataset.library === kind;
     button.classList.toggle('active', active); button.setAttribute('aria-pressed', active);
