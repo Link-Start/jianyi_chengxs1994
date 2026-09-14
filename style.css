@@ -26,3 +26,5 @@
 .timeline-snap-guide{position:absolute;top:0;bottom:0;width:2px;background:var(--mint);z-index:8;pointer-events:none;transform:translateX(-1px)}
 .timeline-drag-hint{position:absolute;right:8px;top:2px;background:#111e;padding:4px 8px;border-radius:4px;z-index:9;pointer-events:none}
 #timeline-snap[aria-pressed=true]{color:var(--mint);background:#163637}
+
+.github-link{display:inline-flex;align-items:center;justify-content:center;color:#dedede;width:30px;height:30px;border-radius:4px;flex-shrink:0}.github-link:hover{color:var(--mint);background:#303030}.github-link:focus-visible{outline:2px solid var(--mint)}#author-contact{white-space:nowrap}#author-dialog{width:min(300px,94vw)}.author-body{text-align:center;padding:20px}.author-body img{display:block;width:200px;max-width:100%;height:auto;margin:auto}.author-body p{color:#aaa;font-size:12px;line-height:1.6;margin:16px 0 0}

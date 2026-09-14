@@ -1465,3 +1465,7 @@ function syncEffectCards() {
     button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active));
   });
 }
+
+// 作者二维码按需打开，原生对话框支持 Escape 关闭及焦点返回。
+$('author-contact').onclick = () => $('author-dialog').showModal();
+$('author-close').onclick = () => $('author-dialog').close();

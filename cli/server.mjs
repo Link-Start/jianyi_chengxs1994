@@ -35,7 +35,7 @@ export async function startServer(folder = defaultLibrary(), draftId) {
   const parent = await realpath(folder), root = await realpath(path.join(parent, 'jianyi-drafts'));
   const initial = await readDrafts(parent);
   if (draftId && !initial.some(d => d.id === draftId)) throw new Error('未找到草稿');
-  const staticFiles = new Set(['index.html', 'style.css']);
+  const staticFiles = new Set(['index.html', 'style.css', 'readme_file/wx1.jpg']);
   for (const directory of ['js', 'vendor']) for (const file of await readdir(path.join(repo, directory))) if (file.endsWith('.js')) staticFiles.add(directory + '/' + file);
   // 防止两个本地编辑服务同时改写同一库；CLI 发布新作品无需该锁。
   const lock = path.join(root, '.editor-server.lock');
@@ -91,7 +91,7 @@ export async function startServer(folder = defaultLibrary(), draftId) {
         if (!['GET', 'HEAD'].includes(req.method)) throw failure('方法不支持', 405);
         const name = route === '/' ? 'index.html' : route.slice(1);
         if (!staticFiles.has(name)) throw failure('未找到文件', 404);
-        return await sendFile(req, res, await contained(repo.replace(/\/$/, ''), name), name.endsWith('.js') ? 'text/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html; charset=utf-8');
+        return await sendFile(req, res, await contained(repo.replace(/\/$/, ''), name), name.endsWith('.js') ? 'text/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.jpg') ? 'image/jpeg' : 'text/html; charset=utf-8');
       }
       if (req.headers['x-easycut-token'] !== token) throw failure('本地编辑会话无效，请重新运行 open', 401);
       let result;
