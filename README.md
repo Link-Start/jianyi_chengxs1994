@@ -1,5 +1,7 @@
 # [剪易 EasyCut](https://github.com/chengxs1994/EasyCut)
 
+[English README](README.en.md)
+
 一个纯浏览器（开箱即用）视频编辑器，支持通过 AI Skill 进行语义化剪辑，使用原生 HTML、CSS 和 JavaScript 构建。基础剪辑、预览和导出均在本机浏览器内完成，无需后端，也不会上传素材。
 
 用自然语言描述需求，由 AI 调用 CLI 生成本地草稿，再打开网页预览、调优和导出。也可直接使用 CLI，通过 JSON 配置完成结构化剪辑。
@@ -8,11 +10,13 @@
 
 通过项目提供的 [jianyi-editor Skill](skills/jianyi-editor/SKILL.md)，你可以直接向 AI 描述剪辑需求，无需自己编写 JSON。AI 会把需求转换成结构化配置，调用 EasyCut CLI 生成本地草稿，再打开网页供你预览、调优和导出。
 
-![EasyCut](readme_file/skill_chat.png)
+> 示例需求：把本地横版视频生成可编辑草稿，添加黄色标题、多段字幕、背景音乐和 GIF 贴纸，生成后打开。
 
 流程为：**自然语言需求 → AI 生成配置 → CLI 创建草稿 → 网页预览调优 → 导出视频**。说“生成后打开”时，AI 可使用 `--open` 直接进入生成的草稿；草稿和素材默认保存在当前用户主目录的 `EasyCut` 文件夹中。编辑服务需保持运行，网页修改会保存回同一个库。
 
-![EasyCut](readme_file/skill_video.png)
+![Skill 生成的横版草稿：预览、独立文字轨道与文字属性](readme_file/landscape/text-zh.jpg)
+
+示例先裁去原素材上下的烧录文字，再通过 Skill / CLI 添加独立标题与分段字幕，打开网页继续调优。图中文字为演示文案，非语音识别结果。
 
 目前支持明确时间范围内的裁剪拼接、文字、配乐、贴纸、画中画，以及已有的特效和转场。Skill 是 AI 助手的操作入口，网页内尚未提供聊天剪辑框；不具备内置的画面理解、自动找精彩片段或语音识别能力。未指定片段时间时，需要 AI 使用已有工具读取真实时长，或由你补充。生成的是可编辑草稿，最终视频需在网页导出。
 
@@ -54,31 +58,31 @@
 ## 功能截图
 
 ### 主界面
-![EasyCut](readme_file/index.png)
+![EasyCut](readme_file/landscape/index-zh.jpg)
 
 ### 导入视频
-![EasyCut](readme_file/video.png)
+![EasyCut](readme_file/landscape/video-zh.jpg)
 
 ### 音频
-![EasyCut](readme_file/audio.png)
+![EasyCut](readme_file/landscape/audio-zh.jpg)
 
 ### 文本
 **支持自定义文字样式**
-![EasyCut](readme_file/text.png)
+![EasyCut](readme_file/landscape/text-zh.jpg)
 
 ### 贴纸
 **支持导入图片、透明PNG和动态GIF作为贴纸**
-![EasyCut](readme_file/stickers.png)
+![EasyCut](readme_file/landscape/stickers-zh.jpg)
 
 ### 特效
-![EasyCut](readme_file/special.png)
+![EasyCut](readme_file/landscape/special-zh.jpg)
 
 ### 转场
-![EasyCut](readme_file/transfer.png)
+![EasyCut](readme_file/landscape/transfer-zh.jpg)
 
 ### 画中画
 **支持导入图片和视频作为画中画**
-![EasyCut](readme_file/pic_in_pic.png)
+![EasyCut](readme_file/landscape/pic_in_pic-zh.jpg)
 
 ## 使用流程
 
